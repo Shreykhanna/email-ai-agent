@@ -100,9 +100,9 @@ Rules:
 `,
 });
 
-// const summariseEmailAgentResponse = await summariseEmailAgent.invoke({
-//   messages: [{ role: "user", content: "Can you summarise my latest email?" }],
-// });
+const summariseEmailAgentResponse = await summariseEmailAgent.invoke({
+  messages: [{ role: "user", content: "Can you summarise my latest email?" }],
+});
 
 const draftEmailAgentResponse = await draftEmailAgent.invoke(
   {

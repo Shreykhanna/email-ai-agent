@@ -31,8 +31,9 @@ const authoriseUsersTool = tool(
     description: "Authorises a user to access their email.",
   }
 );
-
-const systemPrompt = `
+export const summariseEmailAgent = async (message: string) => {
+  console.log("Starting summariseEmailAgent...");
+  const systemPrompt = `
 You are an email assistant that summarises latest emails for users.
 You have access to only one tool:
 
@@ -44,28 +45,29 @@ Rules:
 - Do not explain your reasoning.
 `;
 
-const model = await initChatModel("gpt-5-nano", { maxTokens: 2000 });
+  const model = await initChatModel("gpt-5-nano", { maxTokens: 2000 });
 
-const client = new MultiServerMCPClient({
-  read_gmail: {
-    transport: "stdio",
-    command: "node",
-    args: ["D:/projects/gmail-mcp/build/index.js"],
-  },
-});
-const tools = await client.getTools();
+  const client = new MultiServerMCPClient({
+    summarise_email: {
+      transport: "stdio",
+      command: "node",
+      args: ["D:/projects/gmail-mcp/build/index.js"],
+    },
+  });
+  const tools = await client.getTools();
 
-console.error("tools", tools);
+  console.error("tools", tools);
 
-export const summariseEmail = createAgent({
-  model,
-  tools,
-  systemPrompt: systemPrompt,
-});
+  const summariseEmail = createAgent({
+    model,
+    tools,
+    systemPrompt: systemPrompt,
+  });
 
-// const summariseEmailAgentResponse = await summariseEmailAgent.invoke({
-//   messages: [{ role: "user", content: "Can you summarise my latest email?" }],
-// });
-
-// const summariseEmailMessage = summariseEmailAgentResponse.messages.at(-1);
-// console.log("AI Message Content:", summariseEmailMessage?.content);
+  const summariseEmailAgentResponse = await summariseEmail.invoke({
+    messages: [{ role: "user", content: message }],
+  });
+  return summariseEmailAgentResponse;
+  // const summariseEmailMessage = summariseEmailAgentResponse.messages.at(-1);
+  // console.log("AI Message Content:", summariseEmailMessage?.content);
+};
