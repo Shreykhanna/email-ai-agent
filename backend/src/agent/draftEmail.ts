@@ -23,7 +23,7 @@ const client = new MultiServerMCPClient({
 });
 const tools = await client.getTools();
 
-const draftEmailAgent = createAgent({
+export const draftEmailAgent = createAgent({
   model,
   tools,
   checkpointer: new MemorySaver(),
@@ -74,5 +74,5 @@ await draftEmailAgent.invoke(
 // const summariseEmailMessage = summariseEmailAgentResponse.messages.at(-1);
 // console.log("AI Message Content:", summariseEmailMessage?.content);
 
-const draftMessage = draftEmailAgentResponse.messages.at(-1);
-console.log("Draft Message Content:", draftEmailAgentResponse);
+// const draftMessage = draftEmailAgentResponse.messages.at(-1);
+// console.log("Draft Message Content:", draftEmailAgentResponse);

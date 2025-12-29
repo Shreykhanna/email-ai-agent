@@ -57,15 +57,15 @@ const tools = await client.getTools();
 
 console.error("tools", tools);
 
-const summariseEmailAgent = createAgent({
+export const summariseEmailAgent = createAgent({
   model,
   tools,
   systemPrompt: systemPrompt,
 });
 
-const summariseEmailAgentResponse = await summariseEmailAgent.invoke({
-  messages: [{ role: "user", content: "Can you summarise my latest email?" }],
-});
+// const summariseEmailAgentResponse = await summariseEmailAgent.invoke({
+//   messages: [{ role: "user", content: "Can you summarise my latest email?" }],
+// });
 
-const summariseEmailMessage = summariseEmailAgentResponse.messages.at(-1);
-console.log("AI Message Content:", summariseEmailMessage?.content);
+// const summariseEmailMessage = summariseEmailAgentResponse.messages.at(-1);
+// console.log("AI Message Content:", summariseEmailMessage?.content);
