@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { summariseEmailAgent } from "./agent/summariseEmail.ts";
-import { draftEmailAgent } from "./agent/draftEmail.ts";
+import { summariseEmail } from "./agent/summariseEmail.ts";
+import { draftEmail } from "./agent/draftEmail.ts";
 
 const app = express();
 const port = 3000;
@@ -10,7 +10,7 @@ app.use(express.json());
 
 app.post("/summarise-email", async (req, res) => {
   const { message } = req.body;
-  const response = await summariseEmailAgent.invoke({
+  const response = await summariseEmail.invoke({
     messages: [{ role: "user", content: message }],
   });
   console.log("Summarise Response:", response);
@@ -19,7 +19,7 @@ app.post("/summarise-email", async (req, res) => {
 
 app.post("/draft-email", async (req, res) => {
   const { message } = req.body;
-  const response = await draftEmailAgent.invoke({
+  const response = await draftEmail.invoke({
     messages: [{ role: "user", content: message }],
   });
   console.log("Draft Response:", response);

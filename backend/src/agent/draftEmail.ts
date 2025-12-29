@@ -23,7 +23,7 @@ const client = new MultiServerMCPClient({
 });
 const tools = await client.getTools();
 
-export const draftEmailAgent = createAgent({
+export const draftEmail = createAgent({
   model,
   tools,
   checkpointer: new MemorySaver(),
@@ -52,7 +52,7 @@ Rules:
 `,
 });
 
-const draftEmailAgentResponse = await draftEmailAgent.invoke(
+const draftEmailAgentResponse = await draftEmail.invoke(
   {
     messages: [
       {
@@ -64,7 +64,7 @@ const draftEmailAgentResponse = await draftEmailAgent.invoke(
   config
 );
 
-await draftEmailAgent.invoke(
+await draftEmail.invoke(
   new Command({
     resume: { decisions: [{ type: "approve" }] },
   }),

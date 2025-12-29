@@ -57,7 +57,7 @@ const tools = await client.getTools();
 
 console.error("tools", tools);
 
-export const summariseEmailAgent = createAgent({
+export const summariseEmail = createAgent({
   model,
   tools,
   systemPrompt: systemPrompt,
