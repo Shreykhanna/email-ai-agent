@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "Node16",
     "moduleResolution": "Node16",
-    "outDir": "./build",
+    "outDir": "backend/build",
     "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
@@ -11,5 +11,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["index.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["backend/node_modules"]
 }

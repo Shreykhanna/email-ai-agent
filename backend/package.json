@@ -7,6 +7,7 @@
     "@modelcontextprotocol/sdk": "^1.25.1",
     "ai": "^6.0.3",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
     "langchain": "^1.2.3",
     "zod": "^4.2.1"
   },
@@ -31,6 +32,7 @@
   "homepage": "https://github.com/Shreykhanna/email-ai-agent#readme",
   "description": "",
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
