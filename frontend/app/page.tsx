@@ -11,8 +11,7 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const AGENT_URL =
-    process.env.NEXT_PUBLIC_AGENT_URL ??
-    "http://localhost:4000/summarise-email";
+    process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:4000/email-agent";
 
   async function sendMessage() {
     const trimmed = text.trim();
