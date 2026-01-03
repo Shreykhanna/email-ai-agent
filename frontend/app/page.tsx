@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import axios from "axios";
 
 type Message = { id: number; role: "user" | "agent"; text: string };
 
@@ -8,6 +9,8 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [interrupt, setInterrupt] = useState<any | null>(null);
+  const [lastUserText, setLastUserText] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const AGENT_URL =
@@ -20,9 +23,9 @@ export default function Home() {
     setMessages((m) => [...m, userMsg]);
     setText("");
     setLoading(true);
-    console.log("AGENT_URL, ", AGENT_URL);
+
     try {
-      // Try POST JSON first, fallback to GET query if not allowed
+      // Try POST JSON first
       let res = await fetch(AGENT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -35,16 +38,115 @@ export default function Home() {
         );
       }
 
-      const reply = await res.text();
-      const agentMsg: Message = {
-        id: Date.now() + 1,
-        role: "agent",
-        text: reply,
-      };
-      setMessages((m) => [...m, agentMsg]);
+      const response = await res.json();
+
+      // If the agent returned an interrupt, save it and show pending message
+      if (response?.status === "requires_action") {
+        console.log("Interrupt response:", response.status, response.args);
+        setInterrupt(response.args);
+        setLastUserText(userMsg.text);
+        const preview = renderInterruptPreview(response.args);
+
+        const pending: Message = {
+          id: Date.now() + 1,
+          role: "agent",
+          text: preview,
+        };
+        setMessages((m) => [...m, pending]);
+      } else {
+        const textReply =
+          response?.output?.text ||
+          response?.messages?.at(-1)?.content ||
+          JSON.stringify(response);
+        const agentMsg: Message = {
+          id: Date.now() + 1,
+          role: "agent",
+          text: textReply,
+        };
+        setMessages((m) => [...m, agentMsg]);
+      }
     } catch (err: any) {
       const errMsg: Message = {
         id: Date.now() + 2,
+        role: "agent",
+        text: `Error: ${err?.message ?? String(err)}`,
+      };
+      setMessages((m) => [...m, errMsg]);
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
+  }
+  function renderInterruptPreview(interruptObj: any) {
+    // Try common shapes: tool input, draft content, messages, or fallback to pretty JSON
+    try {
+      if (!interruptObj) return "[Pending human approval]";
+
+      // Common fields: tool, tool_input, input, content, draft
+      const toolName =
+        interruptObj.tool ||
+        interruptObj.toolName ||
+        interruptObj.tool_call?.name;
+      const input =
+        interruptObj.input ||
+        interruptObj.tool_input ||
+        interruptObj.tool_call?.input ||
+        interruptObj.payload;
+      const draft =
+        interruptObj.draft ||
+        interruptObj.body ||
+        (input && (typeof input === "string" ? input : JSON.stringify(input)));
+      const subject =
+        interruptObj.subject ||
+        interruptObj.title ||
+        (interruptObj.input?.subject ?? undefined);
+
+      let parts: string[] = [];
+      if (toolName) parts.push(`Tool: ${toolName}`);
+      if (subject) parts.push(`Subject: ${subject}`);
+      if (draft)
+        parts.push(
+          `Body:\n${
+            typeof draft === "string" ? draft : JSON.stringify(draft, null, 2)
+          }`
+        );
+
+      if (parts.length > 0) return parts.join("\n\n");
+
+      // Try messages array
+      if (interruptObj.messages)
+        return JSON.stringify(interruptObj.messages, null, 2);
+      return JSON.stringify(interruptObj, null, 2);
+    } catch (e) {
+      return "[Pending human approval]";
+    }
+  }
+
+  async function sendDecision(decision: "approve" | "reject") {
+    if (!lastUserText) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${AGENT_URL}/resume`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: lastUserText, decision }),
+      });
+      const json = await res.json();
+      const textReply =
+        json?.output?.text ||
+        json?.messages?.at(-1)?.content ||
+        JSON.stringify(json);
+      const agentMsg: Message = {
+        id: Date.now() + 3,
+        role: "agent",
+        text: textReply,
+      };
+      setMessages((m) => [...m, agentMsg]);
+      setInterrupt(null);
+      setLastUserText(null);
+    } catch (err: any) {
+      const errMsg: Message = {
+        id: Date.now() + 4,
         role: "agent",
         text: `Error: ${err?.message ?? String(err)}`,
       };
@@ -73,18 +175,49 @@ export default function Home() {
             </p>
           )}
           <div className="flex flex-col gap-3">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`max-w-[85%] ${
-                  m.role === "user"
-                    ? "ml-auto bg-blue-600 text-white"
-                    : "mr-auto bg-gray-200 text-black"
-                } rounded-md px-4 py-2`}
-              >
-                <div className="text-sm whitespace-pre-wrap">{m.text}</div>
+            {interrupt ? (
+              <div className="mt-3">
+                <div className="mb-2 rounded border bg-gray-50 p-3 text-sm whitespace-pre-wrap text-black dark:bg-neutral-800 dark:text-white">
+                  {renderInterruptPreview(interrupt)}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="rounded bg-green-600 px-4 py-2 text-white"
+                    onClick={() => sendDecision("approve")}
+                    disabled={loading}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="rounded bg-red-600 px-4 py-2 text-white"
+                    onClick={() => sendDecision("reject")}
+                    disabled={loading}
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
-            ))}
+            ) : (
+              messages.map(
+                (m) => (
+                  console.log(m.text),
+                  (
+                    <div
+                      key={m.id}
+                      className={`max-w-[85%] ${
+                        m.role === "user"
+                          ? "ml-auto bg-blue-600 text-white"
+                          : "mr-auto bg-gray-200 text-black"
+                      } rounded-md px-4 py-2`}
+                    >
+                      <div className="text-sm whitespace-pre-wrap">
+                        {m.text}
+                      </div>
+                    </div>
+                  )
+                )
+              )
+            )}
           </div>
         </div>
 
