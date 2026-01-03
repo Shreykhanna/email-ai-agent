@@ -57,6 +57,7 @@ export default function Home() {
         const textReply =
           response?.output?.text ||
           response?.messages?.at(-1)?.content ||
+          response?.reply ||
           JSON.stringify(response);
         const agentMsg: Message = {
           id: Date.now() + 1,
