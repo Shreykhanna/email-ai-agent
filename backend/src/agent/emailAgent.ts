@@ -36,7 +36,10 @@ const authoriseUsersTool = tool(
     description: "Authorises a user to access their email.",
   }
 );
-export const emailAgent = async (message: string) => {
+export const emailAgent = async (
+  message: string,
+  resumeDecision?: { type: string }
+) => {
   console.log("Starting Agent...");
   let config = { configurable: { thread_id: "1" } };
 
@@ -46,7 +49,7 @@ You are an email assistant.You have access to two tools: read_email and draft_em
 Rules:
 - You already have permission to read emails.
 - DO NOT ask the user for userId, credentials, or permission.
-- When asked to summarize emails, call the "read_email" tool.
+- When asked to summarize emails, call the "summarise_email" tool.
 - When asked to draft an email, call the "draft_email" tool.
 - The email body must be under 120 words.
 - The subject must be under 8 words.
@@ -72,9 +75,9 @@ Rules:
 
   console.error("tools", tools);
 
-  const emailAgent = createAgent({
+  const agent = createAgent({
     model,
-    tools,
+    tools: tools,
     systemPrompt: systemPrompt,
     checkpointer: new MemorySaver(),
     middleware: [
@@ -89,19 +92,34 @@ Rules:
     ],
   });
 
-  const emailAgentReponse = await emailAgent.invoke(
+  const initialResponse = await agent.invoke(
     {
       messages: [{ role: "user", content: message }],
     },
     config
   );
-  console.log("\n\n\n\n\n\nAgent response\n\n\n\n\n\n\n");
-  console.log(emailAgentReponse);
-  await emailAgent.invoke(
-    new Command({
-      resume: { decisions: [{ type: "approve" }] },
-    }),
-    config
-  );
-  return emailAgentReponse;
+
+  // console.log("Agent initial response interrupt:");
+  // console.log(initialResponse.__interrupt__);
+
+  // If there is an interrupt and no resumeDecision was passed, return the interrupt
+  // so the caller (frontend/API) can display it to a human for approval.
+  if (initialResponse.__interrupt__) {
+    if (!resumeDecision) {
+      return { interrupt: initialResponse.__interrupt__ };
+    }
+
+    // If a resume decision was provided, resume the agent with that decision.
+    const resumed = await agent.invoke(
+      new Command({
+        resume: { decisions: [resumeDecision] },
+      }),
+      config
+    );
+
+    return resumed;
+  }
+
+  // No interrupt; return the normal response
+  return initialResponse;
 };
