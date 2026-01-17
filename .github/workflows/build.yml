@@ -1,0 +1,25 @@
+name: Email Agent Build Action
+run-name: ${{github.actor}}
+on:
+  push:
+    branches: [master]
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "^20"
+      - name: Build Backend
+        run: |
+          cd backend
+          npm ci
+          npm run build
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
