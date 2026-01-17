@@ -1,0 +1,7 @@
+{
+  "watch": ["app", "src", "public"],
+  "ext": "ts,tsx,js,jsx,json,css",
+  "ignore": ["node_modules"],
+  "delay": "100",
+  "exec": "npm run build"
+}

@@ -38,25 +38,25 @@ const authoriseUsersTool = tool(
 );
 export const emailAgent = async (
   message: string,
+  data?: string,
   resumeDecision?: { type: string }
 ) => {
-  console.log("Starting Agent...");
-  let config = { configurable: { thread_id: "1" } };
+  let config = { configurable: { thread_id: Date.now() } };
 
   const systemPrompt = `
-You are an email assistant.You have access to two tools: read_email and draft_email.
+You are an email assistant.You have access to four tools: authenticate_gmail, read_email, list_calendar_events and send_email.
 
 Rules:
-- You already have permission to read emails.
+- Call authenticate_gmail tool to authenticate user first if user is not authenticated.
 - DO NOT ask the user for userId, credentials, or permission.
 - When asked to summarize emails, call the "summarise_email" tool.
-- When asked to draft an email, call the "draft_email" tool.
+- When asked to send an email, call "send_email" tool.
+- When asked to list calendar events, call "list_calendar_events" tool.
 - The email body must be under 120 words.
 - The subject must be under 8 words.
-- You may draft emails, but MUST pause for human approval before finalizing.
-- When drafting an email, generate a clear, polite, and professional draft.
-- Never send emails automatically.
-- Assume a human will review, edit, or cancel the draft.
+- When writing email, generate a clear, polite, and professional email.
+- When you receive data wrapped in <email_context> tags, call send_email.
+- Assume a human will review, edit, or cancel the email.
 - Do not ask for confirmation in natural language — the middleware will handle approval.
 - Summarize the most recent email in 3–4 clear sentences.
 - Do not explain your reasoning.
@@ -73,8 +73,6 @@ Rules:
   });
   const tools = await client.getTools();
 
-  console.error("tools", tools);
-
   const agent = createAgent({
     model,
     tools: tools,
@@ -84,28 +82,28 @@ Rules:
       humanInTheLoopMiddleware({
         interruptOn: {
           send_email: true,
-          draft_email: true,
         },
         descriptionPrefix:
-          "The agent is requesting approval to draft an email. Review the content carefully before approving.",
+          "The agent send email only after the approval from human in the middle",
       }),
     ],
   });
 
   const initialResponse = await agent.invoke(
     {
-      messages: [{ role: "user", content: message }],
+      messages: [
+        { role: "user", content: message },
+        { role: "user", content: data ?? "" },
+      ],
     },
     config
   );
 
-  // console.log("Agent initial response interrupt:");
-  // console.log(initialResponse.__interrupt__);
-
   // If there is an interrupt and no resumeDecision was passed, return the interrupt
   // so the caller (frontend/API) can display it to a human for approval.
   if (initialResponse.__interrupt__) {
-    if (!resumeDecision) {
+    console.log("\n\n\nresumeDescision\n\n\n", resumeDecision);
+    if (resumeDecision?.type === "") {
       return { interrupt: initialResponse.__interrupt__ };
     }
 

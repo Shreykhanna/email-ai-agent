@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 
 type Message = { id: number; role: "user" | "agent"; text: string };
@@ -11,6 +11,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [interrupt, setInterrupt] = useState<any | null>(null);
   const [lastUserText, setLastUserText] = useState<string | null>(null);
+  const [sendEmailVisible, setSendEmailVisible] = useState<boolean>(false);
+  const [emailParts, setEmailParts] = useState<string[]>();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const AGENT_URL =
@@ -29,7 +31,11 @@ export default function Home() {
       let res = await fetch(AGENT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg.text }),
+        body: JSON.stringify({
+          message: userMsg.text,
+          data: "",
+          decision: "",
+        }),
       });
 
       if (!res.ok) {
@@ -78,43 +84,51 @@ export default function Home() {
       inputRef.current?.focus();
     }
   }
+  function computeInterruptParts(interruptObj: any) {
+    const parts: string[] = [];
+    if (!interruptObj) return parts;
+
+    const toolName =
+      interruptObj.tool ||
+      interruptObj.toolName ||
+      interruptObj.tool_call?.name;
+
+    const recipient = interruptObj.to;
+
+    const input =
+      interruptObj.input ||
+      interruptObj.tool_input ||
+      interruptObj.tool_call?.input ||
+      interruptObj.payload;
+
+    const draft =
+      interruptObj.draft ||
+      interruptObj.body ||
+      (input && (typeof input === "string" ? input : JSON.stringify(input)));
+
+    const subject =
+      interruptObj.subject ||
+      interruptObj.title ||
+      (interruptObj.input?.subject ?? undefined);
+
+    if (recipient) parts.push(`To:${recipient}`);
+    if (toolName) parts.push(`Tool: ${toolName}`);
+    if (subject) parts.push(`Subject: ${subject}`);
+    if (draft)
+      parts.push(
+        `Body:\n${
+          typeof draft === "string" ? draft : JSON.stringify(draft, null, 2)
+        }`
+      );
+
+    return parts;
+  }
+
   function renderInterruptPreview(interruptObj: any) {
-    // Try common shapes: tool input, draft content, messages, or fallback to pretty JSON
     try {
       if (!interruptObj) return "[Pending human approval]";
-
-      // Common fields: tool, tool_input, input, content, draft
-      const toolName =
-        interruptObj.tool ||
-        interruptObj.toolName ||
-        interruptObj.tool_call?.name;
-      const input =
-        interruptObj.input ||
-        interruptObj.tool_input ||
-        interruptObj.tool_call?.input ||
-        interruptObj.payload;
-      const draft =
-        interruptObj.draft ||
-        interruptObj.body ||
-        (input && (typeof input === "string" ? input : JSON.stringify(input)));
-      const subject =
-        interruptObj.subject ||
-        interruptObj.title ||
-        (interruptObj.input?.subject ?? undefined);
-
-      let parts: string[] = [];
-      if (toolName) parts.push(`Tool: ${toolName}`);
-      if (subject) parts.push(`Subject: ${subject}`);
-      if (draft)
-        parts.push(
-          `Body:\n${
-            typeof draft === "string" ? draft : JSON.stringify(draft, null, 2)
-          }`
-        );
-
+      const parts = computeInterruptParts(interruptObj);
       if (parts.length > 0) return parts.join("\n\n");
-
-      // Try messages array
       if (interruptObj.messages)
         return JSON.stringify(interruptObj.messages, null, 2);
       return JSON.stringify(interruptObj, null, 2);
@@ -123,27 +137,62 @@ export default function Home() {
     }
   }
 
+  useEffect(() => {
+    // If there's no interrupt and we're in the send-email flow, keep the
+    // previously-derived `emailParts`. This prevents clearing parts when
+    // `sendDecision` sets `sendEmailVisible` then clears `interrupt`.
+    if (!interrupt) {
+      if (sendEmailVisible) return;
+      setEmailParts(undefined);
+      return;
+    }
+    try {
+      const parts = computeInterruptParts(interrupt);
+      setEmailParts(parts.length > 0 ? parts : undefined);
+    } catch (e) {
+      setEmailParts(undefined);
+    }
+  }, [interrupt, sendEmailVisible]);
+
   async function sendDecision(decision: "approve" | "reject") {
     if (!lastUserText) return;
+    console.log("Inside send decision");
+    console.log(lastUserText);
+    console.log(interrupt);
+    console.log(decision);
     setLoading(true);
+
     try {
-      const res = await fetch(`${AGENT_URL}/resume`, {
+      const res = await fetch(`${AGENT_URL}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: lastUserText, decision }),
+        body: JSON.stringify({
+          message: lastUserText,
+          data: interrupt.data,
+          decision: decision,
+        }),
       });
+
       const json = await res.json();
+      console.log("JSON");
+      console.log(json);
+
       const textReply =
+        json?.reply ||
         json?.output?.text ||
         json?.messages?.at(-1)?.content ||
         JSON.stringify(json);
+
       const agentMsg: Message = {
         id: Date.now() + 3,
         role: "agent",
         text: textReply,
       };
       setMessages((m) => [...m, agentMsg]);
+      // decision === "approve" && setSendEmailVisible(true);
+
       setInterrupt(null);
+
       setLastUserText(null);
     } catch (err: any) {
       const errMsg: Message = {
@@ -151,6 +200,7 @@ export default function Home() {
         role: "agent",
         text: `Error: ${err?.message ?? String(err)}`,
       };
+
       setMessages((m) => [...m, errMsg]);
     } finally {
       setLoading(false);
@@ -160,6 +210,36 @@ export default function Home() {
 
   function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") sendMessage();
+  }
+
+  async function handleSendEmail() {
+    console.log("Parts");
+    console.log(emailParts);
+    setLoading(true);
+    try {
+      const result = await axios.post(`${AGENT_URL}/send-email`, {
+        body: emailParts,
+        text,
+      });
+      console.log("Result", result);
+      setSendEmailVisible(false);
+      const successMsg: Message = {
+        id: Date.now() + 5,
+        role: "agent",
+        text: "Email sent successfully!",
+      };
+      setMessages((m) => [...m, successMsg]);
+    } catch (err: any) {
+      const errMsg: Message = {
+        id: Date.now() + 6,
+        role: "agent",
+        text: `Error sending email: ${err?.message ?? String(err)}`,
+      };
+      setMessages((m) => [...m, errMsg]);
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
   }
 
   return (
@@ -218,6 +298,14 @@ export default function Home() {
                   )
                 )
               )
+            )}
+            {sendEmailVisible && (
+              <button
+                className="rounded bg-red-600 px-4 py-2 text-white"
+                onClick={handleSendEmail}
+              >
+                Send email
+              </button>
             )}
           </div>
         </div>
