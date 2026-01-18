@@ -39,8 +39,12 @@ jobs:
       - name: Build Frontend
         run: |
           cd frontend
+          echo "NEXT_PUBLIC_AGENT_URL=${{ secrets.NEXT_PUBLIC_AGENT_URL }}" > .env
           npm ci
           npm run build
+        env:
+          # This ensures the variables are available to the Next.js compiler
+          NEXT_PUBLIC_AGENT_URL: ${{ secrets.NEXT_PUBLIC_AGENT_URL }}
 
       - name: Upload Frontend
         uses: actions/upload-artifact@v4
@@ -51,6 +55,7 @@ jobs:
             frontend/public/
             frontend/next.config.js
             frontend/package.json
+            frontend/.env
           include-hidden-files: true
 
   Deploy:
