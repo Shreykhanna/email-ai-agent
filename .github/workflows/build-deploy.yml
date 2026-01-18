@@ -30,7 +30,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-dist
-          path: backend/build/
+          path: |
+            backend/build/
+            backend/package.json
+            backend/package-lock.json
 
       # --- FRONTEND ---
       - name: Build Frontend
