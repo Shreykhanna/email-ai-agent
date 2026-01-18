@@ -21,8 +21,11 @@ jobs:
 
       # --- BACKEND ---
       - name: Build Backend
+        env:
+          ENV_FILE_BASE64: ${{ secrets.ENV_FILE }}
         run: |
           cd backend
+          echo -n "$ENV_FILE_BASE64" | base64 --decode > .env
           npm ci
           npm run build
 
@@ -34,6 +37,7 @@ jobs:
             backend/build/
             backend/package.json
             backend/package-lock.json
+            backend/.env
 
       # --- FRONTEND ---
       - name: Build Frontend
