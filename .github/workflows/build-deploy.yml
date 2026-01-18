@@ -38,6 +38,7 @@ jobs:
           cd frontend
           npm ci
           npm run build
+
       - name: Upload Frontend
         uses: actions/upload-artifact@v4
         with:
@@ -47,6 +48,7 @@ jobs:
             frontend/public/
             frontend/next.config.js
             frontend/package.json
+          include-hidden-files: true
 
   Deploy:
     runs-on: ubuntu-latest
