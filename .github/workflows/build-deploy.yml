@@ -25,11 +25,12 @@ jobs:
           cd backend
           npm ci
           npm run build
+
       - name: Upload Backend
         uses: actions/upload-artifact@v4
         with:
           name: backend-dist
-          path: build/
+          path: backend/build/
 
       # --- FRONTEND ---
       - name: Build Frontend
