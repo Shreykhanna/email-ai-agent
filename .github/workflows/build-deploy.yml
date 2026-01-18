@@ -97,7 +97,7 @@ jobs:
             cd ~/apps/backend/
             echo "${{ secrets.ENV_FILE }}" | base64 --decode > .env
             npm ci --omit=dev
-            pm2 restart email-ai-agent-backend || pm2 start build/index.js --name "email-agent-backend"
+            pm2 restart email-agent-backend || pm2 start build/index.js --name "email-agent-backend"
 
             # Manage Frontend
             cd ~/apps/frontend
