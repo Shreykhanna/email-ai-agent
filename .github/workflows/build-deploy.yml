@@ -111,5 +111,5 @@ jobs:
             # Manage Frontend
             cd ~/apps/frontend
             npm ci --omit=dev
-            pm2 restart next-app || pm2 start npm --name "next-app" --run start
+            pm2 restart next-app || pm2 start npm --name "next-app" -- run start -p 3000
             pm2 save
