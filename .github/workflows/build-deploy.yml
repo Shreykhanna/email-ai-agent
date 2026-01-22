@@ -3,6 +3,10 @@ run-name: Deploy to prod
 
 on:
   workflow_dispatch:
+    environment:
+      description: "Prod environment"
+      type: environment
+      required: true
 
 jobs:
   Build:
