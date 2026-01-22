@@ -9,6 +9,7 @@ import * as z from "zod";
 import dotenv from "dotenv";
 import { Command, MemorySaver } from "@langchain/langgraph";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
+import { contentFilterMiddleware } from "../guardRails/contentFilterMiddleware";
 
 dotenv.config();
 
@@ -79,6 +80,11 @@ Rules:
     systemPrompt: systemPrompt,
     checkpointer: new MemorySaver(),
     middleware: [
+      contentFilterMiddleware([
+        "download all emails",
+        "delete emails",
+        "close account",
+      ]),
       humanInTheLoopMiddleware({
         interruptOn: {
           send_email: true,
