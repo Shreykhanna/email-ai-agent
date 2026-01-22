@@ -2,8 +2,6 @@ name: Full Stack Deploy (Frontend + Backend)
 run-name: Deploy to prod
 
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
 
 jobs:
