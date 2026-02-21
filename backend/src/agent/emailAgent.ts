@@ -42,7 +42,7 @@ export const emailAgent = async (
   data?: string,
   resumeDecision?: { type: string }
 ) => {
-  let config = { configurable: { thread_id: Date.now() } };
+  let config = { configurable: { thread_id: "1" } };
 
   const systemPrompt = `
 You are an email assistant.You have access to four tools: authenticate_gmail, read_email, list_calendar_events and send_email.
@@ -80,11 +80,7 @@ Rules:
     systemPrompt: systemPrompt,
     checkpointer: new MemorySaver(),
     middleware: [
-      contentFilterMiddleware([
-        "download all emails",
-        "delete emails",
-        "close account",
-      ]),
+      contentFilterMiddleware(["download", "delete", "close"]),
       humanInTheLoopMiddleware({
         interruptOn: {
           send_email: true,

@@ -4,6 +4,8 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -19,7 +21,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@backend/*": ["../backend/src/*"]
     }
   },
   "include": [

@@ -1,6 +1,7 @@
 import { createMiddleware, AIMessage } from "langchain";
 export const contentFilterMiddleware = (bannedKeyWords: string[]) => {
   const keywords = bannedKeyWords.map((keyword) => keyword.toLowerCase());
+  console.log("keywords", keywords);
   return createMiddleware({
     name: "ContentFilterMiddleware",
     beforeAgent: {
@@ -14,7 +15,7 @@ export const contentFilterMiddleware = (bannedKeyWords: string[]) => {
           return;
         }
         const content = firstMessage.content.toString().toLowerCase();
-        for (const keyword in keywords) {
+        for (const keyword of keywords) {
           if (content.includes(keyword)) {
             return {
               messages: [

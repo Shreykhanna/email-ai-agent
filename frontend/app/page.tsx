@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { SenderBox } from "./components/MessageBox/SenderBox";
 
 type Message = { id: number; role: "user" | "agent"; text: string };
 
@@ -17,6 +18,9 @@ export default function Home() {
 
   const AGENT_URL =
     process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:4000/email-agent";
+
+  console.log("AGENT URL");
+  console.log(AGENT_URL);
 
   async function sendMessage() {
     const trimmed = text.trim();
@@ -40,7 +44,7 @@ export default function Home() {
 
       if (!res.ok) {
         res = await fetch(
-          `${AGENT_URL}?message=${encodeURIComponent(userMsg.text)}`
+          `${AGENT_URL}?message=${encodeURIComponent(userMsg.text)}`,
         );
       }
 
@@ -118,7 +122,7 @@ export default function Home() {
       parts.push(
         `Body:\n${
           typeof draft === "string" ? draft : JSON.stringify(draft, null, 2)
-        }`
+        }`,
       );
 
     return parts;
@@ -243,19 +247,19 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black p-6">
-      <main className="w-full max-w-2xl rounded-md bg-white p-6 shadow-md dark:bg-neutral-900">
-        <h1 className="text-2xl font-semibold mb-4 text-black dark:text-white">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-500 to-purple-200 font-sans p-6">
+      <main className="w-full max-w-2xl rounded-md bg-white p-6 shadow-md">
+        <h1 className="text-2xl font-semibold mb-4 text-black dark:text-black">
           Email Agent — Chat
         </h1>
 
-        <div className="mb-4 h-[60vh] overflow-auto rounded border border-gray-200 p-4 bg-gray-50 dark:bg-neutral-800">
+        <div className="mb-6 h-[60vh] overflow-auto rounded border border-gray-200 p-4 bg-white">
           {messages.length === 0 && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-black">
               No messages yet. Send a message to start.
             </p>
           )}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {interrupt ? (
               <div className="mt-3">
                 <div className="mb-2 rounded border bg-gray-50 p-3 text-sm whitespace-pre-wrap text-black dark:bg-neutral-800 dark:text-white">
@@ -283,20 +287,11 @@ export default function Home() {
                 (m) => (
                   console.log(m.text),
                   (
-                    <div
-                      key={m.id}
-                      className={`max-w-[85%] ${
-                        m.role === "user"
-                          ? "ml-auto bg-blue-600 text-white"
-                          : "mr-auto bg-gray-200 text-black"
-                      } rounded-md px-4 py-2`}
-                    >
-                      <div className="text-sm whitespace-pre-wrap">
-                        {m.text}
-                      </div>
+                    <div key={m.id} className="flex justify-end bg-black-200">
+                      <SenderBox text={m.text} />
                     </div>
                   )
-                )
+                ),
               )
             )}
             {sendEmailVisible && (

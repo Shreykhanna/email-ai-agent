@@ -17,6 +17,8 @@ type AgentResponse =
 
 app.post("/email-agent", async (req, res) => {
   const { message, data = "", decision = "" } = req.body;
+
+  console.log("MEssage,data", message, data, decision);
   try {
     const response: AgentResponse = (await emailAgent(message, data, {
       type: decision,
@@ -25,6 +27,8 @@ app.post("/email-agent", async (req, res) => {
     if ("interrupt" in response && response.interrupt) {
       const actionRequest = (response as any).interrupt[0]?.value
         ?.actionRequests?.[0];
+
+      console.log("Action rquests", actionRequest);
 
       // Return the tool arguments (the draft content) to the frontend
       return res.json({

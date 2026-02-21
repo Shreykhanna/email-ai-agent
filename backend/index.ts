@@ -10,8 +10,8 @@ import dotenv from "dotenv";
 import { OpenAI } from "@langchain/openai";
 
 dotenv.config();
-
-const OPEN_API_KEY = process.env.OPEN_API_KEY || "";
+console.log(process.env.OPENAI_API_KEY);
+const OPEN_API_KEY = process.env.OPENAI_API_KEY || "";
 if (!OPEN_API_KEY) {
   throw new Error("OPEN_API_KEY is not set in environment variables");
 }
