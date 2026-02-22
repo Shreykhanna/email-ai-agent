@@ -4,41 +4,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/src/lib/prisma";
 import LinkedInProvider from "next-auth/providers/linkedin";
-import util from "node:util";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  debug: true,
-  logger: {
-    error(code, ...message) {
-      console.error("[auth][logger][error][code]", code);
-
-      for (const m of message) {
-        console.error(
-          "[auth][logger][error][raw]",
-          util.inspect(m, { depth: null, colors: false, showHidden: true }),
-        );
-
-        if (m instanceof Error) {
-          console.error("[auth][logger][error][name]", m.name);
-          console.error("[auth][logger][error][msg]", m.message);
-          console.error("[auth][logger][error][stack]", m.stack);
-          console.error(
-            "[auth][logger][error][ownKeys]",
-            Reflect.ownKeys(m).map(String),
-          );
-          // force access non-enumerable cause
-          // @ts-ignore
-          console.error("[auth][logger][error][cause]", m.cause);
-        }
-      }
-    },
-    warn(code, ...message) {
-      console.warn("[auth][logger][warn]", code, ...message);
-    },
-    debug(code, ...message) {
-      console.log("[auth][logger][debug]", code, ...message);
-    },
-  },
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
@@ -83,9 +50,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       name: "Whatsapp",
       type: "oauth",
       checks: ["none"],
-      // client: {
-      //   token_endpoint_auth_method: "client_secret_post",
-      // },
+
       clientId: process.env.WHATSAPP_CLIENT_ID,
       clientSecret: process.env.WHATSAPP_CLIENT_SECRET,
       authorization: {
@@ -95,8 +60,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             "public_profile,business_management,whatsapp_business_management,whatsapp_business_messaging",
           response_type: "code",
           config_id: process.env.NEXT_PUBLIC_CONFIGURATION_ID,
-          // override_default_response_type: "true",
-          // redirect_uri: process.env.META_REDIRECT_URI,
         },
       },
       token: {

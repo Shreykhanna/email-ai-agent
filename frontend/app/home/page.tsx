@@ -19,7 +19,6 @@ const Page = () => {
   const [email, setEmail] = useState("");
   const { data: session, status } = useSession();
   const [messages, setMessages] = useState<Array<string>>([]);
-  const [account, setAccount] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
 
   let isMounted = true;
@@ -28,16 +27,11 @@ const Page = () => {
     const logAccountDetails = async () => {
       if (session?.user?.id && status === "authenticated") {
         try {
-          const account = await fetchAccount(session.user.id, "google");
           const connectedAccounts = await fetchAccounts(session.user.id);
-          // fetch("/api/gmail-watch", { method: "POST" });
+          await fetch("/api/gmail-watch", { method: "POST" });
           // Only proceed if the component hasn't unmounted/re-rendered
           if (isMounted) {
-            setAccount(account);
             setAccounts(connectedAccounts);
-            if (account?.accessToken) {
-              const result = await sendAccountToReadEmailAPI(account);
-            }
           }
         } catch (error) {
           if (isMounted) console.error("Error fetching account:", error);

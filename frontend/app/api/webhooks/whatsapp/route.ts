@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "node:crypto";
+import {
+  getWhatsAppMessagesFromMemoryStore,
+  saveWhatsAppMessagesToMemoryStore,
+} from "@/src/lib/agent/memoryStore/memoryStore";
+import { prisma } from "@/src/lib/prisma";
+import { isValidSignature } from "../util/isValidSignature";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -13,22 +18,6 @@ export async function GET(req: NextRequest) {
   }
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
-const isValidSignature = (rawBody: string, signatureHeader: string | null) => {
-  const appSecret = process.env.WHATSAPP_APP_SECRET;
-  if (!appSecret || !signatureHeader) return false;
-  const [algorithm, receivedHex] = signatureHeader.split("=");
-  if (algorithm !== "sha256" || !receivedHex) return false;
-
-  const expectedHex = crypto
-    .createHmac("sha256", appSecret)
-    .update(rawBody, "utf8")
-    .digest("hex");
-
-  const received = Buffer.from(receivedHex, "hex");
-  const expected = Buffer.from(expectedHex, "hex");
-  if (received.length !== expected.length) return false;
-  return crypto.timingSafeEqual(received, expected);
-};
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -49,6 +38,7 @@ export async function POST(request: NextRequest) {
 
   const entries = Array.isArray(body?.entry) ? body.entry : [];
   const messages: Array<{
+    userId: string | null;
     messageId: string | null;
     from: string | null;
     type: string | null;
@@ -69,12 +59,29 @@ export async function POST(request: NextRequest) {
     name: string;
     username: string;
   }> = [];
+  const userIdByPhoneNumberId = new Map<string, string | null>();
 
   for (const entry of entries) {
     const changes = Array.isArray(entry?.changes) ? entry.changes : [];
     for (const change of changes) {
       const value = change?.value ?? {};
       const phoneNumberId = value?.metadata?.phone_number_id ?? null;
+      let ownerUserId: string | null = null;
+      if (phoneNumberId) {
+        if (userIdByPhoneNumberId.has(phoneNumberId)) {
+          ownerUserId = userIdByPhoneNumberId.get(phoneNumberId) ?? null;
+        } else {
+          const account = await prisma.account.findFirst({
+            where: {
+              provider: "whatsapp",
+              providerAccountId: phoneNumberId,
+            },
+            select: { userId: true },
+          });
+          ownerUserId = account?.userId ?? null;
+          userIdByPhoneNumberId.set(phoneNumberId, ownerUserId);
+        }
+      }
       const contacts = value?.contacts ? value.contacts : [];
 
       for (const contact of contacts) {
@@ -88,6 +95,7 @@ export async function POST(request: NextRequest) {
         : [];
       for (const message of inboundMessages) {
         messages.push({
+          userId: ownerUserId,
           messageId: message?.id ?? null,
           from: message?.from ?? null,
           type: message?.type ?? null,
@@ -119,11 +127,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  console.log("[whatsapp-webhook] messages:", messages.length);
-  console.log("[whatsapp-webhook] statuses:", statuses.length);
   if (messages.length > 0)
     console.log("[whatsapp-webhook] first message:", messages[0]);
-  console.log("Messages", messages);
+
+  await saveWhatsAppMessagesToMemoryStore(messages);
+
+  await getWhatsAppMessagesFromMemoryStore(messages[0].userId!, 50);
+
   return NextResponse.json({
     ok: true,
     messageCount: messages.length,

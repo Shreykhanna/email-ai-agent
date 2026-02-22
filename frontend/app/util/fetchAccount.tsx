@@ -3,10 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/src/lib/prisma";
 
-export const fetchAccount = async (
-  userId?: string,
-  provider?: string,
-) => {
+export const fetchAccount = async (userId?: string, provider?: string) => {
   try {
     if (!userId) {
       // If no userId provided, get from session
@@ -19,7 +16,6 @@ export const fetchAccount = async (
       return null;
     }
 
-    // Use Prisma instead of TypeORM - much simpler!
     const account = await prisma.account.findFirst({
       where: {
         userId: userId,

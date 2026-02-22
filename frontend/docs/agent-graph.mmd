@@ -1,0 +1,41 @@
+flowchart TD
+  A[START] --> R{Route by query}
+
+  R -->|fetch emails for messageid| AUTH[authenticate]
+  R -->|summarise unread| AUTH
+  R -->|summarise| AUTH
+  R -->|draft| DRAFT[draft_email]
+  R -->|default| SEND[send_email]
+
+  AUTH --> C1{tool_calls?}
+  C1 -->|yes| AUTH_T[authenticate_tool]
+  AUTH_T --> AUTH
+  C1 -->|no + fetch| FETCH[fetch_unread_emails_node]
+  C1 -->|no + summarise unread| SUMU[summarise_unread_emails_node]
+  C1 -->|no + summarise| SUM[summarise_emails_node]
+  C1 -->|no + else| E[END]
+
+  FETCH --> C2{tool_calls?}
+  C2 -->|yes| FETCH_T[fetch_unread_emails_tool]
+  FETCH_T --> FETCH
+  C2 -->|no| E
+
+  SUM --> C3{tool_calls?}
+  C3 -->|yes| SUM_T[summarise_emails_tool]
+  SUM_T --> SUM
+  C3 -->|no| E
+
+  SUMU --> C4{tool_calls?}
+  C4 -->|yes| SUMU_T[summarise_unread_emails_tool]
+  SUMU_T --> SUMU
+  C4 -->|no| E
+
+  DRAFT --> C5{tool_calls?}
+  C5 -->|yes| DRAFT_T[draft_email_tool]
+  DRAFT_T --> DRAFT
+  C5 -->|no| E
+
+  SEND --> C6{tool_calls?}
+  C6 -->|yes| SEND_T[send_email_tool]
+  SEND_T --> SEND
+  C6 -->|no| E

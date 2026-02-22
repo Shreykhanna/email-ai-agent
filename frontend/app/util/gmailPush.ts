@@ -27,7 +27,7 @@ const getTopicName = () => {
 };
 
 export const startGmailWatch = async (userId?: string) => {
-  const account = await fetchAccount(userId);
+  const account = await fetchAccount(userId, "google");
   if (!account) throw new Error("No Gmail account found for user");
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -48,7 +48,7 @@ export const startGmailWatch = async (userId?: string) => {
     access_token: account.accessToken,
     refresh_token: account.refreshToken,
     scope: account.scope!,
-    expiry_date: account.expiresAt,
+    expiry_date: Number(account.expiresAt) * 1000,
     token_type: account.tokenType,
   });
 

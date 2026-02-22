@@ -78,7 +78,7 @@ export const AgentMessageFeed = ({
           </div>
         )}
 
-        {!loading && !error && messages.length === 0 && (
+        {!loading && !error && observation.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-sm text-slate-500">
             No summaries yet. Connect an account and request an update to see
             the latest messages.
