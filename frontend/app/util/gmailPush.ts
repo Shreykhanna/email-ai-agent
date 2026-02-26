@@ -2,20 +2,7 @@
 
 import { google } from "googleapis";
 import { fetchAccount } from "./fetchAccount";
-
-type GmailWatchResponse = {
-  historyId?: string;
-  expiration?: string;
-};
-
-type PubSubPushBody = {
-  message?: {
-    data?: string;
-    messageId?: string;
-    attributes?: Record<string, string>;
-  };
-  subscription?: string;
-};
+import { PubSubPushBody, GmailWatchResponse } from "@/app/types/types";
 
 const getTopicName = () => {
   const fullTopic = process.env.GMAIL_PUBSUB_TOPIC;
@@ -53,6 +40,7 @@ export const startGmailWatch = async (userId?: string) => {
   });
 
   const gmail = google.gmail({ version: "v1", auth: authClient });
+
   try {
     await gmail.users.stop({ userId: "me" });
   } catch (error) {
