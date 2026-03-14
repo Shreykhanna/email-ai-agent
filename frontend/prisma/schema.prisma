@@ -15,6 +15,8 @@ model Account {
     type              String
     provider          String
     providerAccountId String
+    phoneNumberId     String? @map("phone_number_id")
+    providerEmail     String? @map("provider_email")
     refresh_token     String? @db.Text
     access_token      String? @db.Text
     expires_at        Int?
@@ -22,6 +24,7 @@ model Account {
     scope             String?
     id_token          String? @db.Text
     session_state     String?
+    isActive          Boolean @default(false)
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -5,6 +5,7 @@ import {
 } from "@/src/lib/agent/memoryStore/memoryStore";
 import { prisma } from "@/src/lib/prisma";
 import { isValidSignature } from "../util/isValidSignature";
+import { saveWhatsAppMessagesToDatabase } from "@/app/util/whatsApp/saveWhatsAppMessagesToDatabase";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
     userName: string | null;
     text: string | null;
     timestamp: string | null;
+    providerAccountId: string | null;
     phoneNumberId: string | null;
   }> = [];
   const statuses: Array<{
@@ -53,13 +55,17 @@ export async function POST(request: NextRequest) {
     status: string | null;
     recipientId: string | null;
     timestamp: string | null;
+    providerAccountId: string | null;
     phoneNumberId: string | null;
   }> = [];
   const profile: Array<{
     name: string;
     username: string;
   }> = [];
-  const userIdByPhoneNumberId = new Map<string, string | null>();
+  const userByPhoneNumberId = new Map<
+    string,
+    { userId: string | null; providerAccountId: string | null }
+  >();
 
   for (const entry of entries) {
     const changes = Array.isArray(entry?.changes) ? entry.changes : [];
@@ -67,19 +73,30 @@ export async function POST(request: NextRequest) {
       const value = change?.value ?? {};
       const phoneNumberId = value?.metadata?.phone_number_id ?? null;
       let ownerUserId: string | null = null;
+      let accountProviderAccountId: string | null = null;
+
       if (phoneNumberId) {
-        if (userIdByPhoneNumberId.has(phoneNumberId)) {
-          ownerUserId = userIdByPhoneNumberId.get(phoneNumberId) ?? null;
+        if (userByPhoneNumberId.has(phoneNumberId)) {
+          const cached = userByPhoneNumberId.get(phoneNumberId)!;
+          ownerUserId = cached.userId;
+          accountProviderAccountId = cached.providerAccountId;
         } else {
           const account = await prisma.account.findFirst({
             where: {
               provider: "whatsapp",
-              providerAccountId: phoneNumberId,
+              phoneNumberId,
             },
-            select: { userId: true },
+            select: {
+              userId: true,
+              providerAccountId: true,
+            },
           });
           ownerUserId = account?.userId ?? null;
-          userIdByPhoneNumberId.set(phoneNumberId, ownerUserId);
+          accountProviderAccountId = account?.providerAccountId ?? null;
+          userByPhoneNumberId.set(phoneNumberId, {
+            userId: ownerUserId,
+            providerAccountId: accountProviderAccountId,
+          });
         }
       }
       const contacts = value?.contacts ? value.contacts : [];
@@ -108,6 +125,7 @@ export async function POST(request: NextRequest) {
             message?.interactive?.list_reply?.title ??
             null,
           timestamp: message?.timestamp ?? null,
+          providerAccountId: accountProviderAccountId,
           phoneNumberId,
         });
       }
@@ -121,18 +139,24 @@ export async function POST(request: NextRequest) {
           status: status?.status ?? null,
           recipientId: status?.recipient_id ?? null,
           timestamp: status?.timestamp ?? null,
+          providerAccountId: accountProviderAccountId,
           phoneNumberId,
         });
       }
     }
   }
 
-  if (messages.length > 0)
+  if (messages.length > 0) {
     console.log("[whatsapp-webhook] first message:", messages[0]);
+  }
 
-  await saveWhatsAppMessagesToMemoryStore(messages);
+  await saveWhatsAppMessagesToDatabase(messages);
 
-  await getWhatsAppMessagesFromMemoryStore(messages[0].userId!, 50);
+  // await saveWhatsAppMessagesToMemoryStore(messages);
+
+  // if (messages.length > 0 && messages[0].userId) {
+  //   await getWhatsAppMessagesFromMemoryStore(messages[0].userId, 50);
+  // }
 
   return NextResponse.json({
     ok: true,

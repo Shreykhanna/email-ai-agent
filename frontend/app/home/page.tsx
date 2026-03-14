@@ -28,7 +28,11 @@ const Page = () => {
       if (session?.user?.id && status === "authenticated") {
         try {
           const connectedAccounts = await fetchAccounts(session.user.id);
-          await fetch("/api/gmail-watch", { method: "POST" });
+
+          if (connectedAccounts) {
+            await fetch("/api/gmail-watch", { method: "POST" });
+          }
+
           // Only proceed if the component hasn't unmounted/re-rendered
           if (isMounted) {
             setAccounts(connectedAccounts);

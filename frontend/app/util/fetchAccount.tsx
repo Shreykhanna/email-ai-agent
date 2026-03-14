@@ -19,7 +19,8 @@ export const fetchAccount = async (userId?: string, provider?: string) => {
     const account = await prisma.account.findFirst({
       where: {
         userId: userId,
-        ...(provider ? { provider } : {}),
+        isActive: true,
+        provider: "google",
       },
     });
 
@@ -60,7 +61,7 @@ export const fetchAccounts = async (userId?: string) => {
     }
 
     const accounts = await prisma.account.findMany({
-      where: { userId },
+      where: { userId, isActive: true },
     });
 
     return accounts.map((account) => ({
@@ -71,6 +72,7 @@ export const fetchAccounts = async (userId?: string) => {
       refreshToken: account.refresh_token,
       scope: account.scope,
       tokenType: account.token_type,
+      isActive: account.isActive,
     }));
   } catch (error) {
     console.error("❌ DB Fetch Error:", error);

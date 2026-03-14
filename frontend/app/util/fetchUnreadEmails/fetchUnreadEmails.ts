@@ -52,12 +52,14 @@ export const fetchUnreadEmails = async (
           maxResults: 5,
           pageToken,
           labelId: ["UNREAD", "IMPORTANT", "INBOX"],
-          historyTypes: ["messageAdded"],
         });
 
         for (const h of history.data.history ?? []) {
           for (const m of h.messagesAdded ?? []) {
             if (m.message?.id) ids.add(m.message.id);
+          }
+          for (const l of h.labelsAdded ?? []) {
+            if (l.message?.id) ids.add(l.message.id);
           }
         }
 
@@ -71,6 +73,17 @@ export const fetchUnreadEmails = async (
         error,
       );
     }
+  }
+
+  if (messageIds.length === 0) {
+    const list = await gmail.users.messages.list({
+      userId: "me",
+      q: "is:unread in:inbox category:primary -category:promotions -category:social -category:updates",
+      maxResults: 10,
+    });
+    messageIds = (list.data.messages ?? [])
+      .map((m) => m.id)
+      .filter(Boolean) as string[];
   }
 
   const messages = await Promise.all(
